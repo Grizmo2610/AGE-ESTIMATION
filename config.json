@@ -1,0 +1,17 @@
+{
+    "seed": 42,
+    "PRETRAIN_DATASET_ROOT": "/kaggle/input/datasets/imdb-clean",
+    "VAL_DATASET_ROOT":"/kaggle/input/datasets/moritzm00/utkface-cropped/UTKFace",
+    "COMPETITIONS_ROOT": "/kaggle/input/competitions/hamic-new-year-2026-cv-task/dataset",
+    
+    "MODEL_FOLDER": "models",
+    "SAMPLE_FOLDER": "sample",
+    "plot_image_path": "plot_image.png",
+    "history_path": "history.json",
+    "model_path": "models/best_rmse_model.pth",
+    "BATCH_SIZE": 16,
+    "EPOCHS": 10,
+    "IMG_SIZE": 224,
+    "max_age": 120,
+    "val_ratio": 0.2
+}

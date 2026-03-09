@@ -1,0 +1,13 @@
+facenet-pytorch==2.6.0
+geopandas==1.1.1
+kagglehub==0.3.10
+matplotlib==3.10.0
+numpy==1.26.4
+opencv-python==4.10.0.82
+pandas==2.2.3
+pillow==10.2.0
+scikit-learn==1.6.1
+timm==1.0.14
+torch==2.8.0
+torchvision==0.23.0
+tqdm==4.67.1
