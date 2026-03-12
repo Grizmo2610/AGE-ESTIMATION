@@ -18,8 +18,21 @@ In addition, the project utilizes the <a href="https://github.com/timesler/facen
 
 The primary objective of this project is to accurately estimate the age of individuals depicted in facial images under the best possible conditions while also providing gender classification.
 
+### **BUILT WITH**
+
+* [![Python][Python]][Python-url]
+* [![PyTorch][PyTorch]][PyTorch-url]
+* [![OpenCV][OpenCV]][OpenCV-url]
+* [![Vision Transformer][VisionTransformer]][VisionTransformer-url]
+* [![MTCNN][MTCNN]][MTCNN-url]
+* [![Pillow][Pillow]][Pillow-url]
+* [![NumPy][NumPy]][NumPy-url]
+
+
 ## **UPDATE**
-> Update will be here
+
+* **09-March-2026 (0.0.1)**: Initial commit with basic prediction script
+* **13-March-2026 (0.1.1)**: Added command line interface (CLI) for inference
 
 ## **INSTALLATION**
 
@@ -96,6 +109,94 @@ From this conditioned feature representation, the architecture branches again in
 Finally, the outputs from the gender prediction and the age estimation modules are combined to produce the final output: **Gender and Age prediction** for the input face image.
 
 
+## **PREDICTION CLI**
+
+The `predict.py` script provides a command line interface for running face detection, gender classification, and age prediction using the trained model.
+
+Run the script from the project root:
+
+```bash
+python predict.py [OPTIONS]
+```
+
+---
+
+## **EXAMPLES**
+
+Run inference on an image:
+
+```bash
+python predict.py --image sample/img4.jpg
+```
+
+Run inference on an image and display the result:
+
+```bash
+python predict.py --image sample/img4.jpg --imshow
+```
+
+Save the prediction result:
+
+```bash
+python predict.py --image sample/img4.jpg --save
+```
+
+Save cropped faces separately:
+
+```bash
+python predict.py --image sample/img4.jpg --save --crop
+```
+
+Run inference using the default webcam:
+
+```bash
+python predict.py --camera 0 --imshow
+```
+
+Run inference using an IP / RTSP camera:
+
+```bash
+python predict.py --camera rtsp://camera_address --imshow
+```
+
+Force the model to run on GPU:
+
+```bash
+python predict.py --image sample/img4.jpg --device cuda
+```
+
+Adjust padding for cropped faces:
+
+```bash
+python predict.py --image sample/img4.jpg --padding 0.3
+```
+
+Show program version:
+
+```bash
+python predict.py --version
+```
+
+---
+
+### **OPTIONS**
+
+* `--image PATH` : run inference on an image
+* `--camera ID/URL` : run inference using a camera (webcam index or RTSP URL)
+* `--imshow` : display prediction results in a window
+* `--save` : save prediction results
+* `--save-path PATH` : custom directory for saved outputs
+* `--crop` : save cropped face images separately
+* `--padding FLOAT` : padding ratio added to face bounding boxes before cropping
+* `--device {cpu,cuda}` : select computation device
+* `--log-level LEVEL` : logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+* `--version` : display program version
+* `--help` : show all CLI options and usage information
+
+## **LICENSE**
+
+Distributed under the Apache License. See `LICENSE.txt` for more information.
+
 ## **CONTACT**
 
 Hoàng Tú (Grizmo)- [@tuantu2610](https://www.instagram.com/tuantu2610/) - hoangtuantu893@gmail.com
@@ -106,3 +207,28 @@ Hoàng Tú (Grizmo)- [@tuantu2610](https://www.instagram.com/tuantu2610/) - hoan
 * Pytorch-Age-Estimation with the ideal for combine feature for multi-task model: [https://github.com/manhcuong02/Pytorch-Age-Estimation](https://github.com/manhcuong02/Pytorch-Age-Estimation)
 
 * HAMIC New year Challenge: [https://github.com/HaianCao/HAMIC_New_Year_2026_Challenge](https://github.com/HaianCao/HAMIC_New_Year_2026_Challenge)
+
+
+
+<!-- MARKDOWN BADGES -->
+
+[Python]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white
+[Python-url]: https://www.python.org/
+
+[PyTorch]: https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white
+[PyTorch-url]: https://pytorch.org/
+
+[OpenCV]: https://img.shields.io/badge/OpenCV-27338e?style=for-the-badge&logo=opencv&logoColor=white
+[OpenCV-url]: https://opencv.org/
+
+[VisionTransformer]: https://img.shields.io/badge/Vision%20Transformer-ViT-blue?style=for-the-badge
+[VisionTransformer-url]: https://arxiv.org/abs/2010.11929
+
+[MTCNN]: https://img.shields.io/badge/MTCNN-Face%20Detection-green?style=for-the-badge
+[MTCNN-url]: https://github.com/timesler/facenet-pytorch
+
+[Pillow]: https://img.shields.io/badge/Pillow-Image%20Processing-orange?style=for-the-badge
+[Pillow-url]: https://python-pillow.org/
+
+[NumPy]: https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white
+[NumPy-url]: https://numpy.org/
