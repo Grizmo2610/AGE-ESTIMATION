@@ -33,6 +33,11 @@ The primary objective of this project is to accurately estimate the age of indiv
 
 * **09-March-2026 (0.0.1)**: Initial commit with basic prediction script
 * **13-March-2026 (0.1.1)**: Added command line interface (CLI) for inference
+* **14-March-2026 (0.1.2)**: 
+    * *fix*: correct training logic
+    * *refactor*: rename variables and reorder calls
+    * *feat*: add layer freezing before finetune
+    * *perf*: update optimizer
 
 ## **INSTALLATION**
 

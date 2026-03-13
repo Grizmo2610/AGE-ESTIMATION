@@ -7,7 +7,7 @@ from PIL import Image
 import cv2
 from torch.utils.data import Dataset
 
-class IMDBDataset(Dataset):
+class PretrainingPhaseDataset(Dataset):
     """
     Dataset for Pretrain Stage
     """
@@ -68,7 +68,7 @@ class IMDBDataset(Dataset):
 
         return {"image":image}
 
-class UTKFacesDataset(Dataset):
+class CompetitionDataset(Dataset):
     """
     Dataset for test stage
     """

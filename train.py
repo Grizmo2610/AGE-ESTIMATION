@@ -7,7 +7,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from torch import Tensor
 
 import timm
@@ -150,9 +150,12 @@ def build_model(config, device):
     model = AgeModel(config["max_age"]).to(device)
 
     optimizer = torch.optim.AdamW([
-        {"params": model.backbone.parameters(), "lr": 3e-5},
-        {"params": model.ordinal_head.parameters(), "lr": 3e-4},
-        {"params": model.class_head.parameters(), "lr": 3e-4},
+            {"params": model.gender_head.parameters(), "lr": 3e-4},
+            {"params": model.range_head.parameters(), "lr": 3e-4},
+            {"params": model.ordinal_head.parameters(), "lr": 3e-4},
+            {"params": model.class_head.parameters(), "lr": 3e-4},
+            {"params": model.gender_embedding.parameters(), "lr": 3e-4},
+            {"params": model.range_embedding.parameters(), "lr": 3e-4},
     ], weight_decay=0.01)
 
     criterion = {
@@ -206,7 +209,7 @@ def load_imdb_data(roots, transform):
 
     root = os.path.join(roots["imdb_root"], "imdb-clean-1024/imdb-clean-1024")
 
-    train_dataset = IMDBDataset(root, df_all, transform)
+    train_dataset = PretrainingPhaseDataset(root, df_all, transform)
     # val_dataset = IMDBDataset(root, df_val, val_transform)
     # test_dataset = IMDBDataset(root, df_test, val_transform)
 
@@ -214,14 +217,14 @@ def load_imdb_data(roots, transform):
 
 def load_utk_data(roots, transform):
     df_val = build_utk_dataframe(roots["utk_root"])
-    val_dataset = IMDBDataset(roots["utk_root"], df_val, transform)
+    val_dataset = PretrainingPhaseDataset(roots["utk_root"], df_val, transform)
     return val_dataset
 
 def load_competition_data(roots, train_transform, val_transform, config, model, device, num_workers):
     train_csv = os.path.join(roots["competitions"], "dataset/train.csv")
     test_csv = os.path.join(roots["competitions"], "dataset/test.csv")
 
-    root = os.path.join(roots["competitions"], "images")
+    root = os.path.join(roots["competitions"], "dataset/images")
     df_train: pd.DataFrame = pd.read_csv(train_csv)
     df_test: pd.DataFrame = pd.read_csv(test_csv)
     df_train = infer_gender_for_df(df_train, root, val_transform, config, model, device, num_workers)
@@ -229,9 +232,9 @@ def load_competition_data(roots, train_transform, val_transform, config, model, 
     df_train, df_val = train_test_split(df_train, test_size=config["val_ratio"], random_state=config["seed"])
 
 
-    train_dataset = UTKFacesDataset(root, df_train, train_transform, has_label=True)
-    val_dataset = UTKFacesDataset(root, df_val, val_transform, has_label=True)
-    test_dataset = UTKFacesDataset(root, df_test, val_transform, has_label=False)
+    train_dataset = CompetitionDataset(root, df_train, train_transform, has_label=True)
+    val_dataset = CompetitionDataset(root, df_val, val_transform, has_label=True)
+    test_dataset = CompetitionDataset(root, df_test, val_transform, has_label=False)
     return train_dataset, val_dataset, test_dataset
 
 def build_loader(dataset, batch_size, shuffle, num_workers):
@@ -242,16 +245,14 @@ def build_loader(dataset, batch_size, shuffle, num_workers):
         num_workers=num_workers
     )
 
-def generate_submission(model_path, test_loader):
-    predict_model = AgeNet(model_path)
-
+def generate_submission(model, test_loader):
     results = []
 
     for load in test_loader:
         images = load["image"]
         filenames = load["filename"]
 
-        preds = predict_model.predict(images)
+        preds = model.predict(images)
 
         genders = preds["gender"]
         ages = preds["age"]
@@ -276,7 +277,7 @@ def infer_gender_for_df(
 ): 
     
     df = df.reset_index(drop=True)
-    dataset = UTKFacesDataset(image_root, df, transform, has_label=False ) 
+    dataset = CompetitionDataset(image_root, df, transform, has_label=False ) 
     loader = DataLoader(dataset, batch_size=config["BATCH_SIZE"], shuffle=False, num_workers=num_workers) 
     model.eval() 
     all_genders = [] 
@@ -297,13 +298,13 @@ if __name__ == "__main__":
 
     model, optimizer, criterion = build_model(config, device)
 
-    train_tf, val_tf = build_transforms(model)
+    train_transform, val_transform = build_transforms(model)
 
-    train_dataset: IMDBDataset = load_imdb_data(roots, train_tf)
-    val_dataset: IMDBDataset = load_utk_data(roots, val_tf)
+    train_dataset_pretrain = load_imdb_data(roots, train_transform)
+    val_dataset_pretrain = load_utk_data(roots, val_transform)
 
-    train_loader: DataLoader = build_loader(train_dataset, config["BATCH_SIZE"], shuffle=True,num_workers=num_workers)
-    val_loader: DataLoader = build_loader(val_dataset, config["BATCH_SIZE"], shuffle= False,num_workers=num_workers)
+    train_loader_pretrain: DataLoader = build_loader(train_dataset_pretrain, config["BATCH_SIZE"], shuffle=True,num_workers=num_workers)
+    valid_loader_pretrain: DataLoader = build_loader(val_dataset_pretrain, config["BATCH_SIZE"], shuffle= False,num_workers=num_workers)
 
     best_metrics = {
         "loss": float("inf"),
@@ -314,51 +315,95 @@ if __name__ == "__main__":
         optimizer=optimizer,
         device=device,
         epochs=config["EPOCHS"],
-        train_loader=train_loader,
-        val_loader=val_loader,
+        train_loader=train_loader_pretrain,
+        val_loader=valid_loader_pretrain,
         criterion=criterion,
         best_metrics=best_metrics,
     )
 
-    plot_history( history, {"plot_image": config["plot_image_path"], "history": config["history"]}, root=roots["sample"] )
+    plot_history(history, {"plot_image": config["plot_image_path"], "history": config["history"]}, root=roots["sample"])
 
-    train_dataset, val_dataset, test_dataset = load_competition_data(
+    train_dataset_contest, val_dataset_contest, test_dataset_contest = load_competition_data(
         roots,
-        train_transform=train_tf,
-        val_transform=val_tf,
+        train_transform=train_transform,
+        val_transform=val_transform,
         config=config,
         model=model, 
         device=device,
-        num_workers=num_workers)
+        num_workers=num_workers
+    )
 
-    train_loader = build_loader(train_dataset, config["BATCH_SIZE"], shuffle=True,num_workers=num_workers)
-    val_loader = build_loader(val_dataset, config["BATCH_SIZE"], shuffle=False,num_workers=num_workers)
-    test_loader = build_loader(test_dataset, config["BATCH_SIZE"], shuffle=False,num_workers=num_workers)
+    train_loader_contest = build_loader(train_dataset_contest, config["BATCH_SIZE"], shuffle=True,num_workers=num_workers)
+    valid_loader_contest = build_loader(val_dataset_contest, config["BATCH_SIZE"], shuffle=False,num_workers=num_workers)
+    test_loader_contest = build_loader(test_dataset_contest, config["BATCH_SIZE"], shuffle=False,num_workers=num_workers)
 
     checkpoint = torch.load(config["model_path"], map_location=device)
     model.load_state_dict(checkpoint)
     model = model.to(device)
 
-    history = fit(
-        model=model,
-        optimizer=optimizer,
-        device=device,
-        epochs=config["EPOCHS"] // 2,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        criterion=criterion,
-        best_metrics=best_metrics,
+    for p in model.backbone.parameters():
+        p.requires_grad = False
+
+    optimizer = torch.optim.AdamW([
+        {"params": model.gender_head.parameters(), "lr": 3e-4},
+        {"params": model.range_head.parameters(), "lr": 3e-4},
+        {"params": model.ordinal_head.parameters(), "lr": 3e-4},
+        {"params": model.class_head.parameters(), "lr": 3e-4},
+        {"params": model.gender_embedding.parameters(), "lr": 3e-4},
+        {"params": model.range_embedding.parameters(), "lr": 3e-4},
+    ], weight_decay=0.01)
+    
+    history_contest = fit(
+        model=model, 
+        optimizer=optimizer, 
+        device=device, 
+        epochs=5,
+        criterion=criterion, 
+        train_loader=train_loader_contest, 
+        val_loader=valid_loader_contest
+    )
+    
+    for p in model.backbone.blocks[-3:].parameters():
+        p.requires_grad = True
+
+    optimizer = torch.optim.AdamW([
+        {"params": model.backbone.blocks[-3:].parameters(), "lr": 1e-5},
+
+        {"params": model.gender_head.parameters(), "lr": 3e-4},
+        {"params": model.range_head.parameters(), "lr": 3e-4},
+        {"params": model.ordinal_head.parameters(), "lr": 3e-4},
+        {"params": model.class_head.parameters(), "lr": 3e-4},
+        {"params": model.gender_embedding.parameters(), "lr": 3e-4},
+        {"params": model.range_embedding.parameters(), "lr": 3e-4},
+    ], weight_decay=0.01)
+    
+    history_contest = fit(
+        model=model, optimizer=optimizer, 
+        device=device, epochs=20,criterion=criterion, 
+        train_loader=train_loader_contest, val_loader=valid_loader_contest, 
+        best_metrics=best_metrics, history=history_contest
     )
 
-    history = fit(
-        model=model,
-        optimizer=optimizer,
-        device=device,
-        epochs=config["EPOCHS"] // 2,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        criterion=criterion,
-        best_metrics=best_metrics,
-    )
 
-    generate_submission(config["model_path"], test_loader)
+    merged_dataset = ConcatDataset([train_dataset_contest, val_dataset_contest])
+    train_loader_contest = build_loader(merged_dataset, config["BATCH_SIZE"], shuffle=True,num_workers=num_workers)
+    
+
+    for p in model.backbone.parameters():
+        p.requires_grad = True
+
+    history_contest = fit(
+        model=model,
+        optimizer=optimizer, 
+        device=device, 
+        epochs=20,
+        criterion=criterion, 
+        train_loader=train_loader_contest, 
+        val_loader=valid_loader_pretrain, 
+        best_metrics=best_metrics, 
+        history=history_contest
+    )
+    
+    plot_history(history_contest, {"plot_image": "Contest_history.png", "history": config["history_path"]}, root=roots["sample"])
+    
+    generate_submission(model, test_loader_contest)

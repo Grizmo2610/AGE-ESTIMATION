@@ -120,19 +120,19 @@ def plot_history(
 
 def init_history() -> dict[str, dict[str, list]]:
     history = {
-    'train': {
-        'loss': [], 'rmse': [],
-        'ordinal_loss': [], 'ordinal_rmse': [],
-        'cls_loss': [], 'cls_rmse': [],
-        'gender_loss': [], 'gender_acc': []
-    },
-    'val': {
-        'loss': [], 'rmse': [],
-        'ordinal_loss': [], 'ordinal_rmse': [],
-        'cls_loss': [], 'cls_rmse': [],
-        'gender_loss': [], 'gender_acc': []
+        'train': {
+            'loss': [], 'rmse': [],
+            'ordinal_loss': [], 'ordinal_rmse': [],
+            'cls_loss': [], 'cls_rmse': [],
+            'gender_loss': [], 'gender_acc': []
+        },
+        'val': {
+            'loss': [], 'rmse': [],
+            'ordinal_loss': [], 'ordinal_rmse': [],
+            'cls_loss': [], 'cls_rmse': [],
+            'gender_loss': [], 'gender_acc': []
+        }
     }
-}
     return history
 
 def seed_everything(seed):
